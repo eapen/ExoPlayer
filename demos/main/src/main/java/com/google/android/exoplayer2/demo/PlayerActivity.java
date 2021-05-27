@@ -34,6 +34,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.RenderersFactory;
 import com.google.android.exoplayer2.SimpleExoPlayer;
@@ -225,15 +226,9 @@ public class PlayerActivity extends AppCompatActivity
 
   @Override
   public void onClick(View view) {
-    if (view == selectTracksButton
-        && !isShowingTrackSelectionDialog
-        && TrackSelectionDialog.willHaveContent(trackSelector)) {
-      isShowingTrackSelectionDialog = true;
-      TrackSelectionDialog trackSelectionDialog =
-          TrackSelectionDialog.createForTrackSelector(
-              trackSelector,
-              /* onDismissListener= */ dismissedDialog -> isShowingTrackSelectionDialog = false);
-      trackSelectionDialog.show(getSupportFragmentManager(), /* tag= */ null);
+    if (view == selectTracksButton) {
+      float curr = player.getPlaybackParameters().speed;
+      player.setPlaybackParameters(new PlaybackParameters(curr == 1f ? 2f : 1f));
     }
   }
 
