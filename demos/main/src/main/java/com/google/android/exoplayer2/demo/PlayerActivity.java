@@ -40,7 +40,6 @@ import com.google.android.exoplayer2.RenderersFactory;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.audio.AudioAttributes;
 import com.google.android.exoplayer2.drm.FrameworkMediaDrm;
-import com.google.android.exoplayer2.ext.ima.ImaAdsLoader;
 import com.google.android.exoplayer2.mediacodec.MediaCodecRenderer.DecoderInitializationException;
 import com.google.android.exoplayer2.mediacodec.MediaCodecUtil.DecoderQueryException;
 import com.google.android.exoplayer2.offline.DownloadRequest;
@@ -48,13 +47,11 @@ import com.google.android.exoplayer2.source.BehindLiveWindowException;
 import com.google.android.exoplayer2.source.DefaultMediaSourceFactory;
 import com.google.android.exoplayer2.source.MediaSourceFactory;
 import com.google.android.exoplayer2.source.TrackGroupArray;
-import com.google.android.exoplayer2.source.ads.AdsLoader;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo;
 import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.ui.DebugTextViewHelper;
-import com.google.android.exoplayer2.ui.StyledPlayerControlView;
-import com.google.android.exoplayer2.ui.StyledPlayerView;
+import com.google.android.exoplayer2.ui.PlayerControlView;
 import com.google.android.exoplayer2.upstream.DataSource;
 import com.google.android.exoplayer2.util.ErrorMessageProvider;
 import com.google.android.exoplayer2.util.EventLogger;
@@ -66,7 +63,7 @@ import java.util.Map;
 
 /** An activity that plays media using {@link SimpleExoPlayer}. */
 public class PlayerActivity extends AppCompatActivity
-    implements OnClickListener, StyledPlayerControlView.VisibilityListener {
+    implements OnClickListener, PlayerControlView.VisibilityListener {
 
   // Saved instance state keys.
 
@@ -75,7 +72,7 @@ public class PlayerActivity extends AppCompatActivity
   private static final String KEY_POSITION = "position";
   private static final String KEY_AUTO_PLAY = "auto_play";
 
-  protected StyledPlayerView playerView;
+  protected PlayerControlView playerViewControl;
   protected LinearLayout debugRootView;
   protected TextView debugTextView;
   protected SimpleExoPlayer player;
@@ -92,10 +89,6 @@ public class PlayerActivity extends AppCompatActivity
   private int startWindow;
   private long startPosition;
 
-  // For ad playback only.
-
-  private AdsLoader adsLoader;
-
   // Activity lifecycle.
 
   @Override
@@ -109,10 +102,9 @@ public class PlayerActivity extends AppCompatActivity
     selectTracksButton = findViewById(R.id.select_tracks_button);
     selectTracksButton.setOnClickListener(this);
 
-    playerView = findViewById(R.id.player_view);
-    playerView.setControllerVisibilityListener(this);
-    playerView.setErrorMessageProvider(new PlayerErrorMessageProvider());
-    playerView.requestFocus();
+    playerViewControl = findViewById(R.id.player_view);
+    playerViewControl.addVisibilityListener(this);
+    playerViewControl.requestFocus();
 
     if (savedInstanceState != null) {
       trackSelectorParameters = savedInstanceState.getParcelable(KEY_TRACK_SELECTOR_PARAMETERS);
@@ -131,7 +123,6 @@ public class PlayerActivity extends AppCompatActivity
   public void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
     releasePlayer();
-    releaseAdsLoader();
     clearStartPosition();
     setIntent(intent);
   }
@@ -141,9 +132,6 @@ public class PlayerActivity extends AppCompatActivity
     super.onStart();
     if (Util.SDK_INT > 23) {
       initializePlayer();
-      if (playerView != null) {
-        playerView.onResume();
-      }
     }
   }
 
@@ -152,9 +140,6 @@ public class PlayerActivity extends AppCompatActivity
     super.onResume();
     if (Util.SDK_INT <= 23 || player == null) {
       initializePlayer();
-      if (playerView != null) {
-        playerView.onResume();
-      }
     }
   }
 
@@ -162,9 +147,6 @@ public class PlayerActivity extends AppCompatActivity
   public void onPause() {
     super.onPause();
     if (Util.SDK_INT <= 23) {
-      if (playerView != null) {
-        playerView.onPause();
-      }
       releasePlayer();
     }
   }
@@ -173,9 +155,6 @@ public class PlayerActivity extends AppCompatActivity
   public void onStop() {
     super.onStop();
     if (Util.SDK_INT > 23) {
-      if (playerView != null) {
-        playerView.onPause();
-      }
       releasePlayer();
     }
   }
@@ -183,7 +162,6 @@ public class PlayerActivity extends AppCompatActivity
   @Override
   public void onDestroy() {
     super.onDestroy();
-    releaseAdsLoader();
   }
 
   @Override
@@ -219,7 +197,7 @@ public class PlayerActivity extends AppCompatActivity
   @Override
   public boolean dispatchKeyEvent(KeyEvent event) {
     // See whether the player view wants to handle media or DPAD keys events.
-    return playerView.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
+    return playerViewControl.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
   }
 
   // OnClickListener methods
@@ -260,9 +238,7 @@ public class PlayerActivity extends AppCompatActivity
       RenderersFactory renderersFactory =
           DemoUtil.buildRenderersFactory(/* context= */ this, preferExtensionDecoders);
       MediaSourceFactory mediaSourceFactory =
-          new DefaultMediaSourceFactory(dataSourceFactory)
-              .setAdsLoaderProvider(this::getAdsLoader)
-              .setAdViewProvider(playerView);
+          new DefaultMediaSourceFactory(dataSourceFactory);
 
       trackSelector = new DefaultTrackSelector(/* context= */ this);
       trackSelector.setParameters(trackSelectorParameters);
@@ -276,7 +252,7 @@ public class PlayerActivity extends AppCompatActivity
       player.addAnalyticsListener(new EventLogger(trackSelector));
       player.setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus= */ true);
       player.setPlayWhenReady(startAutoPlay);
-      playerView.setPlayer(player);
+      playerViewControl.setPlayer(player);
       debugViewHelper = new DebugTextViewHelper(player, debugTextView);
       debugViewHelper.start();
     }
@@ -330,19 +306,7 @@ public class PlayerActivity extends AppCompatActivity
       }
       hasAds |= mediaItem.playbackProperties.adsConfiguration != null;
     }
-    if (!hasAds) {
-      releaseAdsLoader();
-    }
     return mediaItems;
-  }
-
-  private AdsLoader getAdsLoader(MediaItem.AdsConfiguration adsConfiguration) {
-    // The ads loader is reused for multiple playbacks, so that ad playback can resume.
-    if (adsLoader == null) {
-      adsLoader = new ImaAdsLoader.Builder(/* context= */ this).build();
-    }
-    adsLoader.setPlayer(player);
-    return adsLoader;
   }
 
   protected void releasePlayer() {
@@ -355,17 +319,6 @@ public class PlayerActivity extends AppCompatActivity
       player = null;
       mediaItems = Collections.emptyList();
       trackSelector = null;
-    }
-    if (adsLoader != null) {
-      adsLoader.setPlayer(null);
-    }
-  }
-
-  private void releaseAdsLoader() {
-    if (adsLoader != null) {
-      adsLoader.release();
-      adsLoader = null;
-      playerView.getOverlayFrameLayout().removeAllViews();
     }
   }
 
