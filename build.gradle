@@ -25,6 +25,9 @@ allprojects {
     repositories {
         google()
         jcenter()
+        flatDir {
+            dirs project(':demo').file('libs')
+        }
     }
     if (it.hasProperty('externalBuildDir')) {
         if (!new File(externalBuildDir).isAbsolute()) {

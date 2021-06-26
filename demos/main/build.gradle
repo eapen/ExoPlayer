@@ -53,6 +53,7 @@ android {
 }
 
 dependencies {
+    implementation(name:'extension-opus-release', ext:'aar')
     compileOnly 'org.checkerframework:checker-qual:' + checkerframeworkVersion
     implementation 'androidx.annotation:annotation:' + androidxAnnotationVersion
     implementation 'androidx.appcompat:appcompat:' + androidxAppCompatVersion
@@ -60,9 +61,6 @@ dependencies {
     implementation 'com.google.android.material:material:1.2.1'
     implementation project(modulePrefix + 'extension-cronet')
     implementation project(modulePrefix + 'library-core')
-    implementation project(modulePrefix + 'library-dash')
-    implementation project(modulePrefix + 'library-hls')
-    implementation project(modulePrefix + 'library-smoothstreaming')
     implementation project(modulePrefix + 'library-ui')
 }
 
