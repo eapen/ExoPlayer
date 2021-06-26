@@ -80,20 +80,9 @@ public final class DemoUtil {
   private static @MonotonicNonNull DownloadTracker downloadTracker;
   private static @MonotonicNonNull DownloadNotificationHelper downloadNotificationHelper;
 
-  /** Returns whether extension renderers should be used. */
-  public static boolean useExtensionRenderers() {
-    return BuildConfig.USE_DECODER_EXTENSIONS;
-  }
-
-  public static RenderersFactory buildRenderersFactory(
-      Context context, boolean preferExtensionRenderer) {
+  public static RenderersFactory buildRenderersFactory(Context context) {
     @DefaultRenderersFactory.ExtensionRendererMode
-    int extensionRendererMode =
-        useExtensionRenderers()
-            ? (preferExtensionRenderer
-                ? DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
-                : DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
-            : DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF;
+    int extensionRendererMode = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON;
     return new DefaultRenderersFactory(context.getApplicationContext())
         .setExtensionRendererMode(extensionRendererMode);
   }

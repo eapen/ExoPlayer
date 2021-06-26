@@ -113,7 +113,6 @@ public class SampleChooserActivity extends AppCompatActivity
       Arrays.sort(uris);
     }
 
-    useExtensionRenderers = DemoUtil.useExtensionRenderers();
     downloadTracker = DemoUtil.getDownloadTracker(/* context= */ this);
     loadSample();
 
@@ -238,9 +237,7 @@ public class SampleChooserActivity extends AppCompatActivity
       Toast.makeText(getApplicationContext(), downloadUnsupportedStringId, Toast.LENGTH_LONG)
           .show();
     } else {
-      RenderersFactory renderersFactory =
-          DemoUtil.buildRenderersFactory(
-              /* context= */ this, isNonNullAndChecked(preferExtensionDecodersMenuItem));
+      RenderersFactory renderersFactory = DemoUtil.buildRenderersFactory(this);
       downloadTracker.toggleDownload(
           getSupportFragmentManager(), playlistHolder.mediaItems.get(0), renderersFactory);
     }
