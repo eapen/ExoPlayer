@@ -42,9 +42,6 @@ public class IntentUtil {
   public static final String ACTION_VIEW_LIST =
       "com.google.android.exoplayer.demo.action.VIEW_LIST";
 
-  // Activity extras.
-  public static final String PREFER_EXTENSION_DECODERS_EXTRA = "prefer_extension_decoders";
-
   // Media item configuration extras.
 
   public static final String URI_EXTRA = "uri";

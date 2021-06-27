@@ -75,10 +75,8 @@ public class SampleChooserActivity extends AppCompatActivity
   private static final String CHILD_POSITION_PREFERENCE_KEY = "sample_chooser_child_position";
 
   private String[] uris;
-  private boolean useExtensionRenderers;
   private DownloadTracker downloadTracker;
   private SampleAdapter sampleAdapter;
-  private MenuItem preferExtensionDecodersMenuItem;
   private ExpandableListView sampleListView;
 
   @Override
@@ -125,21 +123,6 @@ public class SampleChooserActivity extends AppCompatActivity
     } catch (IllegalStateException e) {
       DownloadService.startForeground(this, DemoDownloadService.class);
     }
-  }
-
-  @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    MenuInflater inflater = getMenuInflater();
-    inflater.inflate(R.menu.sample_chooser_menu, menu);
-    preferExtensionDecodersMenuItem = menu.findItem(R.id.prefer_extension_decoders);
-    preferExtensionDecodersMenuItem.setVisible(useExtensionRenderers);
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    item.setChecked(!item.isChecked());
-    return true;
   }
 
   @Override
@@ -223,9 +206,6 @@ public class SampleChooserActivity extends AppCompatActivity
 
     PlaylistHolder playlistHolder = (PlaylistHolder) view.getTag();
     Intent intent = new Intent(this, PlayerActivity.class);
-    intent.putExtra(
-        IntentUtil.PREFER_EXTENSION_DECODERS_EXTRA,
-        isNonNullAndChecked(preferExtensionDecodersMenuItem));
     IntentUtil.addToIntent(playlistHolder.mediaItems, intent);
     startActivity(intent);
     return true;
